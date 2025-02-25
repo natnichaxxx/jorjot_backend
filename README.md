@@ -1,2 +1,1 @@
-# jorjot_backend
- 
+set DEBUG=myapp:* & npm start
