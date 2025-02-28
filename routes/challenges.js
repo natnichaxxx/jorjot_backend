@@ -121,13 +121,19 @@ router.get('/status', authMiddleware, async (req, res) => {
 
             const balance = totalIncome - totalExpense;
 
-            if (balance >= activeChallenge.monthlyTarget) {
+            // ถ้าเดือนใดไม่ถึงเป้า ให้ล้มเหลวทันที
+            if (balance < activeChallenge.monthlyTarget) {
+                await Challenge.findByIdAndDelete(activeChallenge._id); // ลบ Challenge ออกไป
+                return res.status(400).json({ error: `Challenge failed in ${monthStart.toISOString().slice(0, 7)}` });
+            }
+
+            // ถ้าผ่านเป้า นับเป็นเดือนที่สำเร็จ
                 successfulMonths++;
 
                 // แปลงเดือนเป็นชื่อ เช่น "2024-03" → "March 2024"
                 let monthName = monthStart.toLocaleString('en-US', { month: 'long', year: 'numeric' });
                 successfulMonthNames.push(monthName);
-            }
+            
         }
 
         console.log(`🎯 Successful Challenge Months: ${successfulMonthNames.join(', ')}`);
@@ -142,7 +148,7 @@ router.get('/status', authMiddleware, async (req, res) => {
                 let newMonthsRequired = challengeLevels[nextLevel].months;
                 let startDate = getChallengeStartDate(); // ใช้ฟังก์ชันคำนวณวันเริ่มต้น
 
-                // 📌 คำนวณ newEndDate ให้เป็นวันสุดท้ายของเดือนรองสุดท้าย
+                // คำนวณ newEndDate ให้เป็นวันสุดท้ายของเดือนรองสุดท้าย
                 let newEndDate = new Date(startDate);
                 newEndDate.setUTCMonth(newEndDate.getUTCMonth() + newMonthsRequired - 1);
                 newEndDate.setUTCDate(1); // วันที่ 1 ของเดือน
@@ -231,6 +237,90 @@ router.get('/monthly', authMiddleware, async (req, res) => {
 
     } catch (error) {
         console.error("Error fetching monthly balance:", error);
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
+// ดึงข้อมูลวันเริ่มต้นและวันสิ้นสุดของ Challenge
+router.get('/dates', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        // ค้นหา Challenge ที่ยังไม่สำเร็จของผู้ใช้
+        let activeChallenge = await Challenge.findOne({ user: userId, completed: false });
+
+        if (!activeChallenge) {
+            return res.status(404).json({ error: "No active challenge found" });
+        }
+
+        let startDate = new Date(activeChallenge.startDate); // ใช้ค่าที่บันทึกไว้แล้ว
+        let monthsRequired = activeChallenge.monthsRequired; // ดึงค่าจาก Challenge
+
+        // คำนวณ endDate ให้เป็นวันสุดท้ายของเดือนรองสุดท้าย
+        let endDate = new Date(startDate);
+        endDate.setUTCMonth(endDate.getUTCMonth() + monthsRequired - 1); // ไปเดือนรองสุดท้าย
+        endDate.setUTCDate(1); // ตั้งเป็นวันที่ 1 ของเดือนนั้นก่อน
+        endDate.setUTCMonth(endDate.getUTCMonth() + 1); // เลื่อนไปเดือนถัดไป
+        endDate.setUTCDate(0); // ได้วันสุดท้ายของเดือนรองสุดท้าย
+        endDate.setUTCHours(23, 59, 59, 999); // ตั้งเป็น 23:59:59
+
+        res.json({
+            user: userId,
+            message: "Challenge dates retrieved",
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString()
+        });
+
+    } catch (error) {
+        console.error("Error fetching challenge dates:", error);
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
+// ดึงค่า monthlyTarget ของ Challenge ปัจจุบัน
+router.get('/target', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        // ค้นหา Challenge ที่ยังไม่สำเร็จของผู้ใช้
+        let activeChallenge = await Challenge.findOne({ user: userId, completed: false });
+
+        if (!activeChallenge) {
+            return res.status(404).json({ error: "No active challenge found" });
+        }
+
+        res.json({
+            user: userId,
+            message: "Challenge target retrieved",
+            monthlyTarget: activeChallenge.monthlyTarget
+        });
+
+    } catch (error) {
+        console.error("Error fetching challenge target:", error);
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
+// ดึงค่า level ปัจจุบันของ Challenge
+router.get('/level', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        // ค้นหา Challenge ที่ยังไม่สำเร็จของผู้ใช้
+        let activeChallenge = await Challenge.findOne({ user: userId, completed: false });
+
+        if (!activeChallenge) {
+            return res.status(404).json({ error: "No active challenge found" });
+        }
+
+        res.json({
+            user: userId,
+            message: "Current challenge level retrieved",
+            level: activeChallenge.level
+        });
+
+    } catch (error) {
+        console.error("Error fetching challenge level:", error);
         res.status(500).json({ error: "Server error" });
     }
 });
