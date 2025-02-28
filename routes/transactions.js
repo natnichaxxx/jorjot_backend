@@ -33,20 +33,24 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 });
 
-// ดึงข้อมูลธุรกรรมของผู้ใช้
+// ดึงข้อมูลธุรกรรมทั้งหมดของผู้ใช้ที่ล็อกอินอยู่
 router.get('/', authMiddleware, async (req, res) => {
     try {
         console.log('🛠 User from Middleware:', req.user.userId);
-        const transactions = await Transaction.find({ user: req.user }).sort({ date: -1 });
-        //res.json(transactions);
+
+        // ค้นหาธุรกรรมที่เป็นของผู้ใช้คนนี้
+        const transactions = await Transaction.find({ user: req.user.userId }).sort({ date: -1 });
+
         res.json({
-            user: req.user,  // เพิ่มข้อมูล user ใน Response
+            user: req.user.userId, // แสดง userId ของผู้ใช้ที่ดึงข้อมูล
             transactions
         });
     } catch (error) {
+        console.error('❌ Error in GET /transactions:', error);
         res.status(500).json({ error: 'Server error' });
     }
 });
+
 
 // แก้ไขค่ารายรับรายจ่าย
 router.put('/:id', authMiddleware, async (req, res) => {
