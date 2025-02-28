@@ -4,7 +4,7 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 const mongoose = require('mongoose');
-const products = require('./routes/products');
+//const products = require('./routes/products');
 var authRouter = require('./routes/auth');
 const transactionsRoutes = require('./routes/transactions');
 const challengesRoutes = require('./routes/challenges');
@@ -32,7 +32,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
-app.use('/products', products);
+//app.use('/products', products);
 app.use('/auth', authRouter);
 app.use('/transactions', transactionsRoutes);
 app.use('/challenges', challengesRoutes);
