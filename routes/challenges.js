@@ -12,7 +12,21 @@ const challengeLevels = {
     4: { months: 12 },
 };
 
-// สร้าง Challenge ใหม่
+// กำหนดให้ startDate เป็นวันที่ 1 ของเดือนเสมอ
+const getChallengeStartDate = () => {
+    let today = new Date();
+    today.setHours(0, 0, 0, 0); // รีเซ็ตเวลาเป็น 00:00:00
+
+    if (today.getDate() === 1) {
+        return today; // ถ้าวันนี้เป็นวันที่ 1 ใช้วันนี้เลย
+    }
+
+    // ใช้ Date.UTC() เพื่อให้เริ่มต้นที่ UTC เสมอ และบังคับให้เป็นวันที่ 1
+    let nextMonth = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 1));
+    return nextMonth;
+};
+
+// เริ่ม Challenge
 router.post('/start', authMiddleware, async (req, res) => {
     try {
         const userId = req.user.userId;
@@ -22,7 +36,6 @@ router.post('/start', authMiddleware, async (req, res) => {
             return res.status(400).json({ error: "Invalid monthly target amount" });
         }
 
-        // หาระดับปัจจุบันของผู้ใช้
         let currentChallenge = await Challenge.findOne({ user: userId, completed: false });
 
         let currentLevel = currentChallenge ? currentChallenge.level : 1;
@@ -31,14 +44,25 @@ router.post('/start', authMiddleware, async (req, res) => {
         }
 
         let monthsRequired = challengeLevels[currentLevel].months;
-        let endDate = new Date();
-        endDate.setMonth(endDate.getMonth() + monthsRequired);
+        let startDate = getChallengeStartDate(); // ใช้ฟังก์ชันที่แก้ไขแล้ว
+
+        // คำนวณ endDate ให้เป็นวันสุดท้ายของเดือนรองสุดท้าย
+        let endDate = new Date(startDate);
+        endDate.setUTCMonth(endDate.getUTCMonth() + monthsRequired - 1); // ไปเดือนรองสุดท้าย
+        endDate.setUTCDate(1); // ตั้งเป็นวันที่ 1 ของเดือนนั้นก่อน
+        endDate.setUTCMonth(endDate.getUTCMonth() + 1); // เลื่อนไปเดือนถัดไป
+        endDate.setUTCDate(0); // ได้วันสุดท้ายของเดือนรองสุดท้าย
+        endDate.setUTCHours(23, 59, 59, 999); // ตั้งเป็น 23:59:59
+
+        console.log(`🎯 Challenge Start Date (Fixed): ${startDate.toISOString()}`);
+        console.log(`🏁 Challenge End Date (Fixed): ${endDate.toISOString()}`);
 
         const newChallenge = new Challenge({
             user: userId,
             level: currentLevel,
             monthlyTarget,
             monthsRequired,
+            startDate,
             endDate
         });
 
@@ -71,17 +95,19 @@ router.get('/status', authMiddleware, async (req, res) => {
 
         for (let i = 0; i <= monthsPassed; i++) {
             let monthStart = new Date(challengeStartDate);
-            monthStart.setMonth(monthStart.getMonth() + i);
-            monthStart.setHours(0, 0, 0, 0);
+            monthStart.setUTCMonth(monthStart.getUTCMonth() + i);
+            monthStart.setUTCDate(1); // ตั้งค่าเป็นวันที่ 1 ของเดือน
+            monthStart.setUTCHours(0, 0, 0, 0);
 
             let monthEnd = new Date(monthStart);
-            monthEnd.setMonth(monthEnd.getMonth() + 1);
-            monthEnd.setHours(23, 59, 59, 999);
+            monthEnd.setUTCMonth(monthEnd.getUTCMonth() + 1);
+            monthEnd.setUTCDate(0); // วันสุดท้ายของเดือน
+            monthEnd.setUTCHours(23, 59, 59, 999);
 
             // ดึงธุรกรรมในเดือนนั้น
             const transactions = await Transaction.find({
                 user: userId,
-                date: { $gte: monthStart, $lt: monthEnd }
+                date: { $gte: monthStart, $lte: monthEnd }
             });
 
             // คำนวณยอดเงินคงเหลือ
@@ -98,19 +124,13 @@ router.get('/status', authMiddleware, async (req, res) => {
             if (balance >= activeChallenge.monthlyTarget) {
                 successfulMonths++;
 
-            // แปลงเดือนเป็นชื่อ เช่น "2024-03" → "March 2024"
-            let monthName = monthStart.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-            successfulMonthNames.push(monthName);
-
+                // แปลงเดือนเป็นชื่อ เช่น "2024-03" → "March 2024"
+                let monthName = monthStart.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+                successfulMonthNames.push(monthName);
             }
         }
 
-         // แสดงผลเดือนที่ทำสำเร็จใน console
-         if (successfulMonthNames.length > 0) {
-            console.log(`🎉 Challenge success in: ${successfulMonthNames.join(', ')}`);
-        } else {
-            console.log("⚠️ No successful challenge months yet.");
-        }
+        console.log(`🎯 Successful Challenge Months: ${successfulMonthNames.join(', ')}`);
 
         // ตรวจสอบว่าเก็บครบทุกเดือนตามที่กำหนดหรือไม่
         if (successfulMonths >= activeChallenge.monthsRequired) {
@@ -120,14 +140,24 @@ router.get('/status', authMiddleware, async (req, res) => {
             if (activeChallenge.level < 5) {
                 const nextLevel = activeChallenge.level + 1;
                 let newMonthsRequired = challengeLevels[nextLevel].months;
-                let newEndDate = new Date();
-                newEndDate.setMonth(newEndDate.getMonth() + newMonthsRequired);
+                let startDate = getChallengeStartDate(); // ใช้ฟังก์ชันคำนวณวันเริ่มต้น
+
+                // 📌 คำนวณ newEndDate ให้เป็นวันสุดท้ายของเดือนรองสุดท้าย
+                let newEndDate = new Date(startDate);
+                newEndDate.setUTCMonth(newEndDate.getUTCMonth() + newMonthsRequired - 1);
+                newEndDate.setUTCDate(1); // วันที่ 1 ของเดือน
+                newEndDate.setUTCMonth(newEndDate.getUTCMonth() + 1); // ขยับไปเดือนถัดไป
+                newEndDate.setUTCDate(0); // วันสุดท้ายของเดือนรองสุดท้าย
+                newEndDate.setUTCHours(23, 59, 59, 999);
+
+                console.log(`🏆 New Challenge Level: ${nextLevel}, Start Date: ${startDate.toISOString()}, End Date: ${newEndDate.toISOString()}`);
 
                 const newChallenge = new Challenge({
                     user: userId,
                     level: nextLevel,
                     monthlyTarget: activeChallenge.monthlyTarget,
                     monthsRequired: newMonthsRequired,
+                    startDate,
                     endDate: newEndDate
                 });
 
@@ -138,6 +168,7 @@ router.get('/status', authMiddleware, async (req, res) => {
         }
 
         res.json({
+            user: userId,
             message: "Challenge in progress",
             successfulMonths,
             targetMonths: activeChallenge.monthsRequired
@@ -155,12 +186,10 @@ router.get('/monthly', authMiddleware, async (req, res) => {
         const userId = req.user.userId;
         const { year, month } = req.query;
 
-        // ตรวจสอบว่ามีการส่งค่าปีและเดือนหรือไม่
         if (!year || !month) {
             return res.status(400).json({ error: "Please provide 'year' and 'month' in the query parameters" });
         }
 
-        // แปลงค่าเป็นตัวเลข
         const yearInt = parseInt(year, 10);
         const monthInt = parseInt(month, 10);
 
@@ -168,11 +197,13 @@ router.get('/monthly', authMiddleware, async (req, res) => {
             return res.status(400).json({ error: "Invalid 'year' or 'month' format" });
         }
 
-        // กำหนดช่วงเวลาเป็นต้นเดือน - สิ้นเดือน
-        const startDate = new Date(yearInt, monthInt - 1, 1, 0, 0, 0);
-        const endDate = new Date(yearInt, monthInt, 0, 23, 59, 59); // วันที่ 0 ของเดือนถัดไปคือวันสุดท้ายของเดือนที่เลือก
+        // กำหนดช่วงเวลาเป็นต้นเดือน - สิ้นเดือน (ใช้ UTC)
+        const startDate = new Date(Date.UTC(yearInt, monthInt - 1, 1, 0, 0, 0));
+        const endDate = new Date(Date.UTC(yearInt, monthInt, 0, 23, 59, 59));
 
-        // ค้นหาธุรกรรมที่อยู่ในช่วงเดือนที่เลือก
+        console.log(`🔍 Fetching balance for: ${startDate.toISOString()} - ${endDate.toISOString()}`);
+
+        // ค้นหาธุรกรรมของผู้ใช้ในช่วงเดือนที่เลือก
         const transactions = await Transaction.find({
             user: userId,
             date: { $gte: startDate, $lte: endDate }
@@ -190,6 +221,7 @@ router.get('/monthly', authMiddleware, async (req, res) => {
         const balance = totalIncome - totalExpense;
 
         res.json({
+            user: userId,
             year: yearInt,
             month: monthInt,
             income: totalIncome,
