@@ -5,7 +5,7 @@ const Transaction = require('../models/Transaction.js');
 const authMiddleware = require('../middleware/authMiddleware');
 const User = require('../models/User');
 
-// บันทึกค่ารายรับรายจ่าย
+// บันทึกธุรกรรม
 router.post('/', authMiddleware, async (req, res) => {
     try {
         console.log("UserId:", req.user.userId);
@@ -28,34 +28,53 @@ router.post('/', authMiddleware, async (req, res) => {
         await newTransaction.save();
         res.status(201).json(newTransaction);
     } catch (error) {
-        console.error("Error Saving Transaction:", error); // แสดง error
+        console.error("Error Saving Transaction:", error);
         res.status(500).json({ error: "Server error" });
     }
 });
 
-// ดึงข้อมูลธุรกรรมทั้งหมดของผู้ใช้ที่ล็อกอินอยู่
+// ดึงข้อมูลของผู้ใช้ที่ล็อกอินอยู่
 router.get('/', authMiddleware, async (req, res) => {
     try {
-        console.log('🛠 User from Middleware:', req.user.userId);
+        console.log('UserId:', req.user.userId);
 
-        // ค้นหาธุรกรรมที่เป็นของผู้ใช้คนนี้
-        const transactions = await Transaction.find({ user: req.user.userId }).sort({ date: -1 });
+        const { year, month } = req.query; // รับค่า year และ month จาก query string
+        let filter = { user: req.user.userId };
+
+        // กรองข้อมูลyear และ month
+        if (year || month) {
+            let startDate, endDate;
+
+            if (year && month) {
+                // ค้นหาธุรกรรมเฉพาะเดือนและปีที่ระบุ
+                startDate = new Date(year, month - 1, 1); // วันที่ 1 ของเดือนที่เลือก
+                endDate = new Date(year, month, 1); // วันที่ 1 ของเดือนถัดไป
+            } else if (year) {
+                // ค้นหาธุรกรรมของทั้งปี
+                startDate = new Date(year, 0, 1); // วันที่ 1 มกราคมของปีที่เลือก
+                endDate = new Date(parseInt(year) + 1, 0, 1); // วันที่ 1 มกราคมของปีถัดไป
+            }
+
+            filter.date = { $gte: startDate, $lt: endDate }; // กรองช่วงวันที่
+        }
+
+        // ค้นหาธุรกรรมของผู้ใช้
+        const transactions = await Transaction.find(filter).sort({ date: -1 });
 
         res.json({
-            user: req.user.userId, // แสดง userId ของผู้ใช้ที่ดึงข้อมูล
+            user: req.user.userId,
             transactions
         });
     } catch (error) {
-        console.error('❌ Error in GET /transactions:', error);
+        console.error('Error in GET /transactions:', error);
         res.status(500).json({ error: 'Server error' });
     }
 });
 
-
-// แก้ไขค่ารายรับรายจ่าย
+// แก้ไขธุรกรรม
 router.put('/:id', authMiddleware, async (req, res) => {
     try {
-        // ตรวจสอบว่าธุรกรรมเป็นของผู้ใช้ที่ล็อกอินอยู่หรือไม่
+        // ตรวจสอบว่าธุรกรรมเป็นของผู้ใช้ที่ล็อกอินอยู่
         const transaction = await Transaction.findOne({ _id: req.params.id, user: req.user.userId });
         if (!transaction) {
             return res.status(404).json({ error: 'Transaction not found or unauthorized' });
@@ -75,11 +94,10 @@ router.put('/:id', authMiddleware, async (req, res) => {
     }
 });
 
-
-// ลบค่ารายรับรายจ่าย
+// ลบธุรกรรม
 router.delete('/:id', authMiddleware, async (req, res) => {
     try {
-        // ตรวจสอบว่าธุรกรรมเป็นของผู้ใช้ที่ล็อกอินอยู่หรือไม่
+        // ตรวจสอบว่าธุรกรรมเป็นของผู้ใช้ที่ล็อกอินอยู่
         const transaction = await Transaction.findOne({ _id: req.params.id, user: req.user.userId });
         if (!transaction) {
             return res.status(404).json({ error: 'Transaction not found or unauthorized' });
