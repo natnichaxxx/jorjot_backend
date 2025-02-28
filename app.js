@@ -6,6 +6,7 @@ var logger = require('morgan');
 const mongoose = require('mongoose');
 const products = require('./routes/products');
 var authRouter = require('./routes/auth');
+const transactionsRoutes = require('./routes/transactions');
 
 mongoose.Promise = global.Promise;
 
@@ -32,6 +33,7 @@ app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/products', products);
 app.use('/auth', authRouter);
+app.use('/transactions', transactionsRoutes);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
