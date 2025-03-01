@@ -253,6 +253,16 @@ router.get('/monthly', authMiddleware, async (req, res) => {
             return res.status(400).json({ error: "Invalid 'year' or 'month' format" });
         }
 
+        // กำหนดวันที่ปัจจุบัน
+        const today = new Date();
+        const currentYear = today.getUTCFullYear();
+        const currentMonth = today.getUTCMonth() + 1; // getUTCMonth() เริ่มจาก 0
+
+        // ตรวจสอบว่าผู้ใช้กำลังขอดูยอดเงินของเดือนที่ยังไม่สิ้นสุดหรือไม่
+        if (currentYear < yearInt || (currentYear === yearInt && currentMonth <= monthInt)) {
+            return res.status(400).json({ error: "Balance for this month is not yet available. Please wait until the next month." });
+        }
+
         // กำหนดช่วงเวลาเป็นต้นเดือน - สิ้นเดือน (ใช้ UTC)
         const startDate = new Date(Date.UTC(yearInt, monthInt - 1, 1, 0, 0, 0));
         const endDate = new Date(Date.UTC(yearInt, monthInt, 0, 23, 59, 59));
