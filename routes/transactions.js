@@ -113,6 +113,116 @@ router.get('/category', authMiddleware, async (req, res) => {
     }
 });
 
+// ดึงข้อมูลยอดเงินคงเหลือ GET /transactions/balance
+router.get('/balance', authMiddleware, async (req, res) => {
+    try {
+        const { wallet } = req.query;
+        let filter = { user: req.user.userId };
+
+        if (wallet) {
+            filter.wallet = wallet;
+        }
+
+        const transactions = await Transaction.find(filter);
+
+        // GET /transactions/balance?wallet=cash
+        const balance = transactions.reduce((total, tx) => {
+            return tx.transaction_type === 'income' ? total + tx.amount : total - tx.amount;
+        }, 0);
+
+        res.json({ user: req.user.userId, balance, wallet: wallet || "all" });
+    } catch (error) {
+        console.error('Error in GET /transactions/balance:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+
+// ดึงรายรับและรายจ่ายของวันนี้ของวันปัจจุบัน GET /transactions/today
+router.get('/today', authMiddleware, async (req, res) => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+
+        const transactions = await Transaction.find({
+            user: req.user.userId,
+            date: { $gte: today, $lt: tomorrow }
+        });
+
+        const incomeToday = transactions
+            .filter(tx => tx.transaction_type === 'income')
+            .reduce((sum, tx) => sum + tx.amount, 0);
+
+        const expenseToday = transactions
+            .filter(tx => tx.transaction_type === 'expense')
+            .reduce((sum, tx) => sum + tx.amount, 0);
+
+        res.json({ user: req.user.userId, incomeToday, expenseToday });
+    } catch (error) {
+        console.error('Error in GET /transactions/today:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// ดึงจำนวนเงินที่เหลือในแต่ละกระเป๋า GET /transactions/wallets
+router.get('/wallets', authMiddleware, async (req, res) => {
+    try {
+        const transactions = await Transaction.find({ user: req.user.userId });
+        const walletSummary = transactions.reduce((acc, tx) => {
+            if (!acc[tx.wallet]) {
+                acc[tx.wallet] = 0;
+            }
+            acc[tx.wallet] += tx.transaction_type === 'income' ? tx.amount : -tx.amount;
+            return acc;
+        }, {});
+
+        res.json({ user: req.user.userId, wallets: walletSummary });
+    } catch (error) {
+        console.error('Error in GET /transactions/wallets:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// ดึงธุรกรรมแยกเป็นรายวัน GET /transactions/daily?date=YYYY-MM-DD
+router.get('/daily', authMiddleware, async (req, res) => {
+    try {
+        console.log('UserId:', req.user.userId);
+
+        const { date, wallet } = req.query;
+        if (!date) {
+            return res.status(400).json({ error: "Date is required (YYYY-MM-DD)" });
+        }
+
+        // แปลง string เป็น Date และกำหนดช่วงเวลา 00:00 - 23:59
+        let startDate = new Date(date);
+        let endDate = new Date(date);
+        endDate.setHours(23, 59, 59, 999);
+
+        let filter = {
+            user: req.user.userId,
+            date: { $gte: startDate, $lt: endDate }
+        };
+
+        if (wallet) {
+            filter.wallet = wallet;
+        }
+
+        // ค้นหาธุรกรรมที่อยู่ในวันนั้น
+        const transactions = await Transaction.find(filter).sort({ date: -1 });
+
+        res.json({
+            date,
+            user: req.user.userId,
+            transactions
+        });
+    } catch (error) {
+        console.error('Error in GET /transactions/daily:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 // แก้ไขธุรกรรม
 router.put('/:id', authMiddleware, async (req, res) => {
     try {
