@@ -38,8 +38,13 @@ router.get('/', authMiddleware, async (req, res) => {
     try {
         console.log('UserId:', req.user.userId);
 
-        const { year, month } = req.query; // รับค่า year และ month จาก query string
+        const { year, month, category } = req.query; // รับค่า year และ month จาก query string
         let filter = { user: req.user.userId };
+        
+         // กรองตามหมวดหมู่ถ้ามีการระบุ
+         if (category) {
+            filter.category = category;
+        }
 
         // กรองข้อมูลyear และ month
         if (year || month) {
