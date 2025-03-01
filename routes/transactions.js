@@ -38,13 +38,8 @@ router.get('/', authMiddleware, async (req, res) => {
     try {
         console.log('UserId:', req.user.userId);
 
-        const { year, month, category } = req.query; // รับค่า year และ month จาก query string
+        const { year, month } = req.query; // รับค่า year และ month จาก query string
         let filter = { user: req.user.userId };
-        
-         // กรองตามหมวดหมู่ถ้ามีการระบุ
-         if (category) {
-            filter.category = category;
-        }
 
         // กรองข้อมูลyear และ month
         if (year || month) {
@@ -72,6 +67,48 @@ router.get('/', authMiddleware, async (req, res) => {
         });
     } catch (error) {
         console.error('Error in GET /transactions:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// API ใหม่: ดึงธุรกรรมตามปีและเดือน พร้อมสรุปยอดตามหมวดหมู่
+router.get('/category', authMiddleware, async (req, res) => {
+    try {
+        console.log('UserId:', req.user.userId);
+
+        const { year, month } = req.query;
+        if (!year || !month) {
+            return res.status(400).json({ error: "Year and month are required" });
+        }
+
+        let startDate = new Date(year, month - 1, 1);
+        let endDate = new Date(year, month, 1);
+
+        // กรองธุรกรรมของผู้ใช้เฉพาะปีและเดือนที่เลือก
+        const filter = {
+            user: req.user.userId,
+            date: { $gte: startDate, $lt: endDate }
+        };
+
+        const transactions = await Transaction.find(filter);
+
+        // จัดกลุ่มธุรกรรมตามหมวดหมู่ และคำนวณยอดรวมของแต่ละหมวดหมู่
+        const categorySummary = transactions.reduce((acc, transaction) => {
+            const { category, amount, transaction_type } = transaction;
+            if (!acc[category]) {
+                acc[category] = { total: 0, transactions: [] };
+            }
+            acc[category].total += transaction_type === 'income' ? amount : -amount;
+            acc[category].transactions.push(transaction);
+            return acc;
+        }, {});
+
+        res.json({
+            user: req.user.userId,
+            category: categorySummary
+        });
+    } catch (error) {
+        console.error('Error in GET /transactions/summary:', error);
         res.status(500).json({ error: 'Server error' });
     }
 });

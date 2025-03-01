@@ -75,6 +75,56 @@ router.post('/start', authMiddleware, async (req, res) => {
     }
 });
 
+// ผู้ใช้ต้องกำหนด monthlyTarget ใหม่ก่อนเริ่มชาเลนจ์ระดับถัดไป
+router.post('/continue', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { monthlyTarget } = req.body;
+
+        if (!monthlyTarget || monthlyTarget <= 0) {
+            return res.status(400).json({ error: "Invalid monthly target amount" });
+        }
+
+        // ค้นหา Challenge ที่สำเร็จล่าสุด
+        let lastChallenge = await Challenge.findOne({ user: userId, completed: true }).sort({ endDate: -1 });
+
+        if (!lastChallenge || lastChallenge.level >= 5) {
+            return res.status(400).json({ error: "No eligible challenge to continue or maximum level!" });
+        }
+
+        const nextLevel = lastChallenge.level + 1;
+        let newMonthsRequired = challengeLevels[nextLevel].months;
+        let startDate = getChallengeStartDate();
+
+        // คำนวณวันสิ้นสุด
+        let newEndDate = new Date(startDate);
+        newEndDate.setUTCMonth(newEndDate.getUTCMonth() + newMonthsRequired - 1);
+        newEndDate.setUTCDate(1);
+        newEndDate.setUTCMonth(newEndDate.getUTCMonth() + 1);
+        newEndDate.setUTCDate(0);
+        newEndDate.setUTCHours(23, 59, 59, 999);
+
+        console.log(`🏆 New Challenge Level: ${nextLevel}, Start Date: ${startDate.toISOString()}, End Date: ${newEndDate.toISOString()}`);
+
+        // สร้างชาเลนจ์ใหม่
+        const newChallenge = new Challenge({
+            user: userId,
+            level: nextLevel,
+            monthlyTarget,
+            monthsRequired: newMonthsRequired,
+            startDate,
+            endDate: newEndDate
+        });
+
+        await newChallenge.save();
+        res.status(201).json({ message: "Next challenge started!", challenge: newChallenge });
+
+    } catch (error) {
+        console.error("Error continuing challenge:", error);
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
 // ตรวจสอบสถานะ Challenge
 router.get('/status', authMiddleware, async (req, res) => {
     try {
