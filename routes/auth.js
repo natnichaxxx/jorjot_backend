@@ -83,9 +83,17 @@ router.put('/change-name', authMiddleware, async (req, res) => {
   });
 
 // ดึงชื่อ
-/*router.get('/name', authMiddleware, async (req, res) => {
+router.get('/name', authMiddleware, async (req, res) => {
     try {
-      const user = await User.findById(req.user.userId);*/
+      const user = await User.findById(req.user.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json({ name: user.name });
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+});
   
 // เปลี่ยนรหัสผ่าน
 router.put('/change-password', authMiddleware, async (req, res) => {
