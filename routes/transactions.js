@@ -41,32 +41,32 @@ router.get('/', authMiddleware, async (req, res) => {
 
         let filter = { user: req.user.userId };
 
-        // กรองประเภท (รายรับ/รายจ่าย) ถ้ามีส่งมา
+        // กรองประเภท (รายรับ/รายจ่าย) ถ้ามีส่งมา /transactions?transaction_type=income
         if (transaction_type) {
             filter.transaction_type = transaction_type; // "income" หรือ "expense"
         }
 
-        // กรองวันที่
+        // กรองวันที่ /transactions?date=YYYY-MM-DD
         if (date) {
             let startDate = new Date(date);
             let endDate = new Date(date);
             endDate.setHours(23, 59, 59, 999);
             filter.date = { $gte: startDate, $lt: endDate };
         } 
-        // กรองเดือนและปี
+        // กรองเดือนและปี /transactions?year=YYYY&month=M
         else if (year && month) {
             let startDate = new Date(year, month - 1, 1);
             let endDate = new Date(year, month, 1);
             filter.date = { $gte: startDate, $lt: endDate };
         }
-        // กรองปี
+        // กรองปี /transactions?year=YYYY
         else if (year) {
             let startDate = new Date(year, 0, 1);
             let endDate = new Date(parseInt(year) + 1, 0, 1);
             filter.date = { $gte: startDate, $lt: endDate };
         }
 
-        // กรองกระเป๋าเงิน (ถ้ามีส่งมา)
+        // กรองกระเป๋าเงิน (ถ้ามีส่งมา) /transactions?wallet=cash
         if (wallet) {
             filter.wallet = wallet;
         }
