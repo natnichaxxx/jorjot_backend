@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const authMiddleware = require('../middleware/authMiddleware');
 const router = express.Router();
+const config = require('../config');
 
 // Register
 router.post('/register', async (req, res) => {
@@ -45,7 +46,7 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: "Incorrect Password" });
     }
 
-    const token = jwt.sign({ userId: user._id }, 'your_jwt_secret');
+    const token = jwt.sign({ userId: user._id }, config.secrets);
 
     res.json({ token });
   } catch (error) {
