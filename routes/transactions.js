@@ -131,6 +131,7 @@ router.get('/category', authMiddleware, async (req, res) => {
     }
 });
 
+/*
 // ดึงข้อมูลยอดเงินคงเหลือ GET /transactions/balance
 router.get('/balance', authMiddleware, async (req, res) => {
     try {
@@ -154,6 +155,7 @@ router.get('/balance', authMiddleware, async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 });
+*/
 
 
 // ดึงรายรับและรายจ่ายของวันนี้ของวันปัจจุบัน GET /transactions/today
