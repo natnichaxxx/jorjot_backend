@@ -61,93 +61,80 @@ router.post('/login', async (req, res) => {
 
 // เปลี่ยนชื่อ
 router.put('/change-name', authMiddleware, async (req, res) => {
-    const { newName } = req.body;
-  
-    if (!newName) {
-      return res.status(400).json({ message: "New name is required" });
-    }
-  
-    try {
-      const user = await User.findById(req.user.userId);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-  
-      user.name = newName;
-      await user.save();
-  
-      res.json({ message: "Name updated successfully", name: newName });
-    } catch (error) {
-      res.status(500).json({ message: "Server error" });
-    }
-  });
+  const { newName } = req.body;
 
-// ดึงชื่อ
-router.get('/name', authMiddleware, async (req, res) => {
-    try {
-      const user = await User.findById(req.user.userId);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      res.json({ name: user.name });
-    } catch (error) {
-      res.status(500).json({ message: "Server error" });
+  if (!newName) {
+    return res.status(400).json({ message: "New name is required" });
+  }
+
+  try {
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
     }
+
+    user.name = newName;
+    await user.save();
+
+    res.json({ message: "Name updated successfully", name: newName });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
 });
-  
-// เปลี่ยนรหัสผ่าน
-router.put('/change-password', authMiddleware, async (req, res) => {
-    const { currentPassword, newpassword, confirmNewPassword } = req.body;
-  
-    if (!currentPassword || !newpassword || !confirmNewPassword) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
-  
-    if (newpassword !== confirmNewPassword) {
-      return res.status(400).json({ message: "New passwords do not match" });
-    }
-  
-    try {
-      const user = await User.findById(req.user.userId);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-  
-      const isMatch = await bcrypt.compare(currentPassword, user.password);
-      if (!isMatch) {
-        return res.status(400).json({ message: "Current password is incorrect" });
-      }
-  
-      user.password = await bcrypt.hash(newpassword, 10);
-      await user.save();
-  
-      res.json({ message: "Password updated successfully" });
-    } catch (error) {
-      res.status(500).json({ message: "Server error" });
-    }
-  });
 
-// Logout (Client ต้องลบ Token เอง)
-router.post('/logout', (req, res) => {
-    res.json({ message: "Logged out successfully" });
-  });
-
-// ดึงรูปโปรไฟล์
+// ดึงชื่อ && profileImage
 router.get('/profile', authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      res.json({ profileImage: user.profileImage });
-    } catch (error) {
-      res.status(500).json({ message: "Server error" });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json({ name: user.name, profileImage: user.profileImage });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
   }
+});
+
+// เปลี่ยนรหัสผ่าน
+router.put('/change-password', authMiddleware, async (req, res) => {
+  const { currentPassword, newpassword, confirmNewPassword } = req.body;
+
+  if (!currentPassword || !newpassword || !confirmNewPassword) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  if (newpassword !== confirmNewPassword) {
+    return res.status(400).json({ message: "New passwords do not match" });
+  }
+
+  try {
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+
+    user.password = await bcrypt.hash(newpassword, 10);
+    await user.save();
+
+    res.json({ message: "Password updated successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Logout (Client ต้องลบ Token เอง)
+router.post('/logout', (req, res) => {
+  res.json({ message: "Logged out successfully" });
 });
 
 // เปลี่ยนรูปโปรไฟล์
 router.put('/profile', authMiddleware, async (req, res) => {
-  const  profileImage  = req.body.selectedImage;
+  const profileImage = req.body.profileImage;
   console.log(profileImage)
 
   if (!availableProfiles.includes(profileImage)) {
