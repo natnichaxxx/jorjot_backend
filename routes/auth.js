@@ -37,12 +37,12 @@ router.post('/login', async (req, res) => {
   try {
     let user = await User.findOne({ name });
     if (!user) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(400).json({ message: "Invalid Username" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(400).json({ message: "Incorrect Password" });
     }
 
     const token = jwt.sign({ userId: user._id }, 'your_jwt_secret');
