@@ -27,7 +27,7 @@ router.post('/register', async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    user = new User({ name, email, password: hashedPassword, profileImage: "/profile1.svg" });
+    user = new User({ name, email, password: hashedPassword, profileImage: "/profile1.svg", level: 1 });
     await user.save();
 
     res.status(200).json({ message: "User registered successfully" });
@@ -82,14 +82,26 @@ router.put('/change-name', authMiddleware, async (req, res) => {
   }
 });
 
-// ดึงชื่อ && profileImage
+// ดึงชื่อ && profileImage && level
 router.get('/profile', authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    res.json({ name: user.name, profileImage: user.profileImage });
+
+    // กำหนดชื่อของระดับ (level)
+    const levelNames = {
+      1: "เบบี้ลิงจ๋อ",
+      2: "ลิงจ๋อหัดเดิน",
+      3: "ลิงจ๋อวัยแรกรุ่น",
+      4: "ลิงจ๋อติดแกลม",
+      5: "ลิงจ๋อทองคำ"
+    };
+
+    const userLevelName = levelNames[user.level] || "ระดับไม่ระบุ";
+
+    res.json({ name: user.name, profileImage: user.profileImage, level: userLevelName });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }

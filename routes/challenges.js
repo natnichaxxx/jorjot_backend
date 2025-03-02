@@ -361,28 +361,4 @@ router.get('/target', authMiddleware, async (req, res) => {
     }
 });
 
-// ดึงค่า level ปัจจุบันของ Challenge
-router.get('/level', authMiddleware, async (req, res) => {
-    try {
-        const userId = req.user.userId;
-
-        // ค้นหา Challenge ที่ยังไม่สำเร็จของผู้ใช้
-        let activeChallenge = await Challenge.findOne({ user: userId, completed: false });
-
-        if (!activeChallenge) {
-            return res.status(404).json({ error: "No active challenge found" });
-        }
-
-        res.json({
-            user: userId,
-            message: "Current challenge level retrieved",
-            level: activeChallenge.level
-        });
-
-    } catch (error) {
-        console.error("Error fetching challenge level:", error);
-        res.status(500).json({ error: "Server error" });
-    }
-});
-
 module.exports = router;
