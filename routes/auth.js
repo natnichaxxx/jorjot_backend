@@ -20,7 +20,7 @@ router.post('/register', async (req, res) => {
   }
 
   try {
-    let user = await User.findOne({ email });
+    let user = await User.findOne({ name, email });
     if (user) {
       return res.status(400).json({ message: "User already exists" });
     }
@@ -30,7 +30,7 @@ router.post('/register', async (req, res) => {
     user = new User({ name, email, password: hashedPassword, profileImage: "/profile1.svg" });
     await user.save();
 
-    res.status(201).json({ message: "User registered successfully" });
+    res.status(200).json({ message: "User registered successfully" });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
@@ -81,6 +81,11 @@ router.put('/change-name', authMiddleware, async (req, res) => {
       res.status(500).json({ message: "Server error" });
     }
   });
+
+// ดึงชื่อ
+/*router.get('/name', authMiddleware, async (req, res) => {
+    try {
+      const user = await User.findById(req.user.userId);*/
   
 // เปลี่ยนรหัสผ่าน
 router.put('/change-password', authMiddleware, async (req, res) => {
@@ -134,7 +139,8 @@ router.get('/profile', authMiddleware, async (req, res) => {
 
 // เปลี่ยนรูปโปรไฟล์
 router.put('/profile', authMiddleware, async (req, res) => {
-  const { profileImage } = req.body;
+  const  profileImage  = req.body.selectedImage;
+  console.log(profileImage)
 
   if (!availableProfiles.includes(profileImage)) {
     return res.status(400).json({ message: "Invalid profile image selection" });
