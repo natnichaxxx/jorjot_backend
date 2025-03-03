@@ -251,7 +251,7 @@ router.get('/status', authMiddleware, async (req, res) => {
 });
 
 // ดูยอดเงินคงเหลือของเดือนที่ต้องการ
-router.get('/monthly', authMiddleware, async (req, res) => {
+router.get('/monthtotal', authMiddleware, async (req, res) => {
     try {
         const userId = req.user.userId;
         const { year, month } = req.query;
