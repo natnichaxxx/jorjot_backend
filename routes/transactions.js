@@ -26,7 +26,7 @@ router.post('/', authMiddleware, async (req, res) => {
         });
 
         await newTransaction.save();
-        res.status(201).json(newTransaction);
+        res.status(200).json(newTransaction);
     } catch (error) {
         console.error("Error Saving Transaction:", error);
         res.status(500).json({ error: "Server error" });
