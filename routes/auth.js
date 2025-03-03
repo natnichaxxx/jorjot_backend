@@ -157,7 +157,6 @@ router.post('/logout', (req, res) => {
 // เปลี่ยนรูปโปรไฟล์
 router.put('/profile', authMiddleware, async (req, res) => {
   const profileImage = req.body.profileImage;
-  console.log(profileImage)
 
   if (!availableProfiles.includes(profileImage)) {
     return res.status(400).json({ message: "Invalid profile image selection" });
