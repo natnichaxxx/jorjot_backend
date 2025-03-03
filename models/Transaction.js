@@ -2,19 +2,19 @@ const mongoose = require('mongoose');
 
 const transactionSchema = new mongoose.Schema({
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    transaction_type: { type: String, enum: ['income', 'expense'] , required: true}, // รายรับหรือรายจ่าย
+    transaction_type: { type: String, enum: ['รายรับ', 'รายจ่าย'] , required: true}, // รายรับหรือรายจ่าย
     amount:  Number,
     category: { 
         type: String,
-        enum: ['food', 'shopping', 'bills', 'transportation', 'entertainment', 'travel', 'savings', 'other'], 
+        enum: ["อาหาร", "ช้อปปิ้ง", "จ่ายบิล", "เดินทาง", "บันเทิง", "เที่ยว", "เงินเก็บ", "อื่นๆ"], 
         required: true 
     },
     wallet: { 
         type: String,
-        enum: ['cash', 'bank_account', 'savings', 'credit_card', 'investment'], 
+        enum: ['เงินสด', 'บัญชีธนาคาร', 'บัตรเครดิต', 'เงินออม', 'เงินลงทุน'], 
         required: true 
     },
-    date: { type: Date },
+    date: { type: String, required: true },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Transaction', transactionSchema);
