@@ -144,7 +144,7 @@ router.get('/status', authMiddleware, async (req, res) => {
         let activeChallenge = await Challenge.findOne({ user: userId, completed: false });
 
         if (!activeChallenge) {
-            return res.status(404).json({ error: "No active challenge found" });
+            return res.status(200).json({ data: "No active challenge found" });
         }
 
         let currentDate = new Date();
