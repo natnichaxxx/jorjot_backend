@@ -99,9 +99,19 @@ router.get('/profile', authMiddleware, async (req, res) => {
       5: "ลิงจ๋อทองคำ"
     };
 
-    const userLevelName = levelNames[user.level] || "ระดับไม่ระบุ";
+    // กำหนดระดับ (level)
+    const levelNum = {
+      1: "ระดับเริ่มต้น",
+      2: "ระดับ 2",
+      3: "ระดับ 3",
+      4: "ระดับ 4",
+      5: "ระดับ 5"
+    };
 
-    res.json({ name: user.name, profileImage: user.profileImage, level: userLevelName });
+    const userLevelName = levelNames[user.level] || "ระดับไม่ระบุ";
+    const userLevelNum = levelNum[user.level] || "ระดับไม่ระบุ";
+
+    res.json({ name: user.name, profileImage: user.profileImage, level: userLevelName, levelNum: userLevelNum });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }

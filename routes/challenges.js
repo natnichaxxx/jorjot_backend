@@ -27,7 +27,7 @@ const getChallengeStartDate = () => {
 };
 
 // เริ่ม Challenge
-router.post('/start', authMiddleware, async (req, res) => {
+router.post('/', authMiddleware, async (req, res) => {
     try {
         const userId = req.user.userId;
         const { monthlyTarget } = req.body;
@@ -67,7 +67,7 @@ router.post('/start', authMiddleware, async (req, res) => {
         });
 
         await newChallenge.save();
-        res.status(201).json({ message: "Challenge started!", challenge: newChallenge });
+        res.status(200).json({ message: "Challenge started!", challenge: newChallenge });
 
     } catch (error) {
         console.error("Error starting challenge:", error);
